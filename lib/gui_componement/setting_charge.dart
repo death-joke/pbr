@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:duration_picker_dialog_box/duration_picker_dialog_box.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'dart:async';
 
@@ -17,7 +18,7 @@ class SettingCharge extends StatefulWidget {
 class _SettingChargeState extends State<SettingCharge> {
   var chargeMode = ['eco', 'normal', 'rapide'];
   String selectedChargeMode = 'normal';
-  int intensite = 0;
+  int intensite = 8;
   String startTime = "";
   String endTime = "";
   Duration duration = const Duration();
@@ -64,10 +65,11 @@ class _SettingChargeState extends State<SettingCharge> {
   /*BLE */ //
   BluetoothState _bluetoothState = BluetoothState.UNKNOWN;
   final FlutterBluetoothSerial _bluetooth = FlutterBluetoothSerial.instance;
-  late BluetoothConnection? connection;
+  BluetoothConnection? connection;
   bool isDisconnecting = false;
   BluetoothDevice? _device;
-  bool _connected = false;
+
+  bool _connected = true;
   bool _isButtonUnavailable = false;
   bool get isConnected => connection != null && connection!.isConnected;
   late int _deviceState;
@@ -97,7 +99,7 @@ class _SettingChargeState extends State<SettingCharge> {
     try {
       devices = await _bluetooth.getBondedDevices();
     } on Exception catch (e) {
-      print(e);
+      debugPrint(e.toString());
     }
 
     if (!mounted) {
@@ -171,6 +173,7 @@ class _SettingChargeState extends State<SettingCharge> {
   void _connect() async {
     setState(() {
       _isButtonUnavailable = true;
+      _isButtonUnavailable;
     });
     if (_device == null) {
       debugPrint('No device selected');
@@ -187,8 +190,17 @@ class _SettingChargeState extends State<SettingCharge> {
           connection!.input!.listen(null).onDone(() {
             if (isDisconnecting) {
               print('Disconnecting locally!');
+
+              setState(() {
+                _connected = false;
+                connection = null;
+              });
             } else {
               print('Disconnected remotely!');
+              setState(() {
+                _connected = false;
+                connection = null;
+              });
             }
             if (this.mounted) {
               setState(() {});
@@ -218,11 +230,23 @@ class _SettingChargeState extends State<SettingCharge> {
                 width: 300,
                 child: ElevatedButton(
                     onPressed: () async {
-                      _showDialog();
+                      var status = await Permission.nearbyWifiDevices.status;
+                      if (status.isDenied) {
+                        Permission.nearbyWifiDevices.request();
+                        debugPrint(status.toString());
+                        // We didn't ask for permission yet or the permission has been denied before but not permanently.
+                      } else {
+                        Permission.nearbyWifiDevices.request();
+                      }
+
+                      debugPrint(status.toString());
+                      if (status.isGranted) {
+                        _showDialog();
+                      }
                     },
                     child: Text(!_connected
                         ? 'choix de la borne de charge'
-                        : _device!.name.toString())),
+                        : /*_device!.name.toString()*/ 'HC-05')),
               ),
               SizedBox(
                 width: 300,
@@ -341,16 +365,18 @@ class _SettingChargeState extends State<SettingCharge> {
               Padding(
                 padding: const EdgeInsets.only(top: 10.0),
                 child: ElevatedButton(
-                    onPressed: () {
-                      var message = chargeMessage();
-                      debugPrint('intensité $intensite');
-                      debugPrint('date début $startTime');
-                      debugPrint('date de fin $endTime');
-                      debugPrint('duréee $duration');
-                      debugPrint('message de charge : $message');
+                    onPressed: !_connected
+                        ? null
+                        : () {
+                            var message = chargeMessage();
+                            debugPrint('intensité $intensite');
+                            debugPrint('date début $startTime');
+                            debugPrint('date de fin $endTime');
+                            debugPrint('duréee $duration');
+                            debugPrint('message de charge : $message');
 
-                      //_sendMessageToBluetooth(message);
-                    },
+                            _sendMessageToBluetooth(message);
+                          },
                     child: const Text('programmer la charge')),
               ),
             ],
