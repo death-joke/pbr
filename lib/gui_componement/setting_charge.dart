@@ -6,7 +6,6 @@ import 'package:duration_picker_dialog_box/duration_picker_dialog_box.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
-
 import 'dart:async';
 
 class SettingCharge extends StatefulWidget {
@@ -27,6 +26,18 @@ class _SettingChargeState extends State<SettingCharge> {
     setState(() {
       duration = newDuartion;
     });
+  }
+
+  //create a method who return true if startTime and endTime are not empty
+  bool isTimeValid() {
+    debugPrint(startTime);
+    debugPrint(endTime);
+
+    if ((startTime == "" || endTime == "") && durationController.text == "") {
+      return false;
+    } else {
+      return true;
+    }
   }
 
   setStartTime(String newStartTime) {
@@ -69,11 +80,26 @@ class _SettingChargeState extends State<SettingCharge> {
   bool isDisconnecting = false;
   BluetoothDevice? _device;
 
-  bool _connected = true;
+  bool _connected = false;
   bool _isButtonUnavailable = false;
   bool get isConnected => connection != null && connection!.isConnected;
   late int _deviceState;
   List<BluetoothDevice> _devicesList = [];
+
+  askForBt() async {
+    var status = await Permission.nearbyWifiDevices.status;
+    if (status.isDenied) {
+      Map<Permission, PermissionStatus> statuses = await [
+        Permission.nearbyWifiDevices,
+        Permission.bluetoothConnect,
+        Permission.bluetoothScan,
+        Permission.location,
+      ].request();
+      // We didn't ask for permission yet or the permission has been denied before but not permanently.
+    } else {
+      Permission.nearbyWifiDevices.request();
+    }
+  }
 
   Future<bool> enableBluetooth() async {
     // Retrieving the current Bluetooth state
@@ -105,7 +131,9 @@ class _SettingChargeState extends State<SettingCharge> {
     if (!mounted) {
       return;
     }
+
     setState(() {
+      debugPrint(devices.toString());
       _devicesList = devices;
     });
   }
@@ -156,9 +184,11 @@ class _SettingChargeState extends State<SettingCharge> {
     });
 
     _deviceState = 0;
+    askForBt();
 
-    enableBluetooth();
-
+    //
+    //enableBluetooth();
+    // getPairedDevices();
     FlutterBluetoothSerial.instance
         .onStateChanged()
         .listen((BluetoothState state) {
@@ -181,7 +211,7 @@ class _SettingChargeState extends State<SettingCharge> {
       if (!isConnected) {
         await BluetoothConnection.toAddress(_device?.address)
             .then((_connection) {
-          print('Connected to the device');
+          debugPrint('Connected to the device');
           connection = _connection;
           setState(() {
             _connected = true;
@@ -231,22 +261,18 @@ class _SettingChargeState extends State<SettingCharge> {
                 child: ElevatedButton(
                     onPressed: () async {
                       var status = await Permission.nearbyWifiDevices.status;
-                      if (status.isDenied) {
-                        Permission.nearbyWifiDevices.request();
-                        debugPrint(status.toString());
-                        // We didn't ask for permission yet or the permission has been denied before but not permanently.
-                      } else {
-                        Permission.nearbyWifiDevices.request();
-                      }
+                      askForBt();
 
                       debugPrint(status.toString());
                       if (status.isGranted) {
+                        await getPairedDevices();
+                        debugPrint(_devicesList.toString());
                         _showDialog();
                       }
                     },
                     child: Text(!_connected
                         ? 'choix de la borne de charge'
-                        : /*_device!.name.toString()*/ 'HC-05')),
+                        : _device!.name.toString())),
               ),
               SizedBox(
                 width: 300,
@@ -365,7 +391,7 @@ class _SettingChargeState extends State<SettingCharge> {
               Padding(
                 padding: const EdgeInsets.only(top: 10.0),
                 child: ElevatedButton(
-                    onPressed: !_connected
+                    onPressed: !(_connected && isTimeValid())
                         ? null
                         : () {
                             var message = chargeMessage();
@@ -400,11 +426,13 @@ class _SettingChargeState extends State<SettingCharge> {
 
     final f = new DateFormat('hh:mm');
 
-    debugPrint("${time!.hour}h${time.minute}");
-    timesetter(
-        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}');
-    controller.text =
-        '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    //debugPrint("${time!.hour}h${time.minute}");
+    if (time != null) {
+      timesetter(
+          '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}');
+      controller.text =
+          '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    }
 
     //return "${time!.hour}h${time.minute}";
   }
@@ -416,9 +444,11 @@ class _SettingChargeState extends State<SettingCharge> {
         initialDuration: const Duration(hours: 2),
         durationPickerMode: DurationPickerMode.Day);
 
-    durationsetter(duration);
-    controller.text =
-        "${duration!.inHours.toString().padLeft(2, '0')}h${duration.inMinutes.remainder(60).toString().padLeft(2, '0')}";
+    if (duration != null) {
+      durationsetter(duration);
+      controller.text =
+          "${duration.inHours.toString().padLeft(2, '0')}h${duration.inMinutes.remainder(60).toString().padLeft(2, '0')}";
+    }
   }
 
   //create a function to print a dialog who print all the device found

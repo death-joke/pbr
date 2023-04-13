@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pbr/pages/home_page.dart';
-import 'package:pbr/pages/profile_page.dart';
+import 'package:pbr/pages/how_to_use.dart';
 import 'package:pbr/pages/setting_page.dart';
 import 'package:pbr/pages/about_page.dart';
 
@@ -19,12 +19,13 @@ class NavBarState extends State<NavBar> {
         // Important: Remove any padding from the ListView.
         padding: EdgeInsets.zero,
         children: [
-          const DrawerHeader(
-            decoration: BoxDecoration(
-              color: Colors.blue,
-            ),
-            child: Text('prototype PBR'),
-          ),
+          DrawerHeader(
+              decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.inversePrimary),
+              child: Image.asset(
+                'assets/logo/P_BR_white500.png',
+                height: 300,
+              )),
           ListTile(
             leading: const Icon(Icons.home),
             title: const Text('Home'),
@@ -43,12 +44,12 @@ class NavBarState extends State<NavBar> {
             thickness: 1,
           ),
           ListTile(
-            leading: const Icon(Icons.account_circle),
-            title: const Text('Profile'),
+            leading: const Icon(Icons.settings),
+            title: const Text('Settings'),
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const ProfilePage(),
+                  builder: (context) => const SettingPage(),
                 ),
               );
             },
@@ -58,12 +59,12 @@ class NavBarState extends State<NavBar> {
             thickness: 1,
           ),
           ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
+            leading: const Icon(Icons.help),
+            title: const Text('How to use'),
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const SettingPage(),
+                  builder: (context) => const How_to_usePage(),
                 ),
               );
             },

@@ -15,10 +15,14 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: Image.asset(
+          'assets/logo/P_BR_white500.png',
+          height: 100,
+        ), //Text(widget.title),
+        centerTitle: true,
       ),
       drawer: const NavBar(),
-      body: const SettingCharge(),
+      body: SettingCharge(),
     );
   }
 }
